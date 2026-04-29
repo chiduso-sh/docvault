@@ -1,79 +1,68 @@
-// FileCard.jsx
-// Renders a single file in the card grid.
-// Receives the file object plus action callbacks as props.
+import { useState } from "react";
 
-const BADGE_STYLES = {
-  PDF: { bg: "#FCEBEB", color: "#A32D2D" },
-  DOC: { bg: "#E6F1FB", color: "#185FA5" },
-  XLS: { bg: "#E1F5EE", color: "#0F6E56" },
-  IMG: { bg: "#EAF3DE", color: "#3B6D11" },
+const BADGE = {
+  PDF: "bg-red-50 text-red-700",
+  DOC: "bg-blue-50 text-blue-700",
+  XLS: "bg-emerald-50 text-emerald-700",
+  IMG: "bg-green-50 text-green-700",
 };
 
-// Props destructuring: instead of writing `props.file`, `props.onStar`,
-// we pull them out directly in the parameter list.
-export default function FileCard({ file, onStar, onDelete }) {
-  const badge = BADGE_STYLES[file.type] || BADGE_STYLES.DOC;
+export default function FileCard({ file, onStar, onDelete, onOpen, onRename }) {
+  const [renaming, setRenaming] = useState(false);
+  const [newName, setNewName]   = useState(file.name);
+
+  function submitRename() {
+    if (newName.trim() && newName !== file.name) onRename(file.id, newName.trim());
+    setRenaming(false);
+  }
 
   return (
     <div
-      style={{
-        background: "white", border: "1px solid #e2e8f0",
-        borderRadius: 12, padding: "12px 10px", cursor: "pointer",
-        transition: "border-color 0.15s",
-      }}
-      onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#94a3b8")}
-      onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#e2e8f0")}
+      onClick={() => !renaming && onOpen(file.storagePath, file.mimeType)}
+      className="bg-white border border-slate-200 rounded-xl p-3 cursor-pointer hover:border-slate-400 transition-colors group"
     >
-      {/* Top row: type badge + action menu */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-        <span style={{
-          fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 20,
-          background: badge.bg, color: badge.color,
-        }}>{file.type}</span>
-
-        {/* Simple action row — star and delete */}
-        <div style={{ display: "flex", gap: 6 }}>
-          {/* onClick calls onStar which was passed from the parent.
-              The parent (DocVault) decides what actually happens —
-              this component doesn't know or care about Supabase. */}
+      {/* Top row */}
+      <div className="flex items-start justify-between mb-2.5">
+        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${BADGE[file.type] ?? BADGE.DOC}`}>
+          {file.type}
+        </span>
+        <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={(e) => { e.stopPropagation(); onStar(file.id, file.starred); }}
-            title={file.starred ? "Unstar" : "Star"}
-            style={{
-              background: "none", border: "none", cursor: "pointer",
-              fontSize: 14, color: file.starred ? "#BA7517" : "#cbd5e1",
-              padding: 0, lineHeight: 1,
-            }}
+            className={`text-sm leading-none ${file.starred ? "text-amber-500" : "text-slate-300 hover:text-amber-400"} transition-colors`}
           >★</button>
           <button
-            onClick={(e) => { e.stopPropagation(); onDelete(file.id, file.storagePath); }}
-            title="Delete"
-            style={{
-              background: "none", border: "none", cursor: "pointer",
-              fontSize: 13, color: "#f09595", padding: 0, lineHeight: 1,
-            }}
+            onClick={(e) => { e.stopPropagation(); setRenaming(true); setNewName(file.name); }}
+            className="text-xs leading-none text-slate-300 hover:text-slate-500 transition-colors"
+          >✎</button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(file.id, file.storagePath, file.name); }}
+            className="text-xs leading-none text-red-300 hover:text-red-500 transition-colors"
           >✕</button>
         </div>
       </div>
 
-      {/* Thumbnail area */}
-      <div style={{
-        width: "100%", height: 68, borderRadius: 6,
-        background: "#f8fafc", border: "1px solid #f1f5f9",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        marginBottom: 10, fontSize: 11, fontWeight: 500, color: "#94a3b8",
-      }}>{file.thumb}</div>
+      {/* Thumbnail */}
+      <div className="w-full h-16 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-xs font-medium text-slate-400 mb-2.5">
+        {file.thumb}
+      </div>
 
-      {/* File name */}
-      <div style={{
-        fontSize: 12, fontWeight: 500, color: "#0f172a",
-        lineHeight: 1.4, marginBottom: 4,
-        // CSS text truncation: clip long names with an ellipsis
-        whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-      }}>{file.name}</div>
+      {/* Name / rename input */}
+      {renaming ? (
+        <input
+          autoFocus
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onBlur={submitRename}
+          onKeyDown={(e) => { if (e.key === "Enter") submitRename(); if (e.key === "Escape") setRenaming(false); }}
+          onClick={(e) => e.stopPropagation()}
+          className="w-full text-xs font-medium text-slate-900 border border-brand rounded px-1 py-0.5 outline-none mb-1"
+        />
+      ) : (
+        <div className="text-xs font-medium text-slate-900 truncate mb-1">{file.name}</div>
+      )}
 
-      {/* Meta: size · date */}
-      <div style={{ fontSize: 11, color: "#94a3b8" }}>{file.size} · {file.date}</div>
+      <div className="text-[11px] text-slate-400">{file.size} · {file.date}</div>
     </div>
   );
 }

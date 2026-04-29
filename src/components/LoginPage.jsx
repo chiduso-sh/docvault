@@ -1,36 +1,26 @@
-// src/components/LoginPage.jsx
-// Handles both Sign In and Sign Up in one form, toggled by a state flag.
-
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
 
 export default function LoginPage() {
-  const [isSignUp, setIsSignUp]   = useState(false);
-  const [email, setEmail]         = useState("");
-  const [password, setPassword]   = useState("");
-  const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState(null);
-  const [message, setMessage]     = useState(null); // success messages
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail]       = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState(null);
+  const [message, setMessage]   = useState(null);
 
   async function handleSubmit(e) {
-    // preventDefault stops the browser from doing a full page reload
-    // (the default behaviour of a form submit)
     e.preventDefault();
     setLoading(true);
     setError(null);
     setMessage(null);
 
     let result;
-
     if (isSignUp) {
       result = await supabase.auth.signUp({ email, password });
-      if (!result.error) {
-        setMessage("Account created! Check your email to confirm, then sign in.");
-      }
+      if (!result.error) setMessage("Account created! Check your email to confirm, then sign in.");
     } else {
       result = await supabase.auth.signInWithPassword({ email, password });
-      // On success, onAuthStateChange in AuthContext fires automatically
-      // and updates the session — no manual redirect needed.
     }
 
     if (result.error) setError(result.error.message);
@@ -38,26 +28,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{
-      minHeight: "100vh", display: "flex",
-      alignItems: "center", justifyContent: "center",
-      background: "#f1f5f9",
-      fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
-    }}>
-      <div style={{
-        background: "white", borderRadius: 16, padding: 36,
-        width: 400, maxWidth: "90vw",
-        boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
-        border: "1px solid #e2e8f0",
-      }}>
+    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 w-full max-w-md p-8">
 
         {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 28 }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 9,
-            background: "#0F6E56",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-9 h-9 rounded-xl bg-brand flex items-center justify-center">
             <svg width="18" height="18" viewBox="0 0 14 14" fill="white">
               <rect x="1" y="1" width="5" height="5" rx="1"/>
               <rect x="8" y="1" width="5" height="5" rx="1"/>
@@ -65,44 +41,31 @@ export default function LoginPage() {
               <rect x="8" y="8" width="5" height="5" rx="1"/>
             </svg>
           </div>
-          <span style={{ fontSize: 20, fontWeight: 700, color: "#0f172a" }}>DocVault</span>
+          <span className="text-xl font-bold text-slate-900">DocVault</span>
         </div>
 
-        <div style={{ fontSize: 18, fontWeight: 600, color: "#0f172a", marginBottom: 4 }}>
+        <h1 className="text-lg font-semibold text-slate-900 mb-1">
           {isSignUp ? "Create an account" : "Welcome back"}
-        </div>
-        <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 24 }}>
+        </h1>
+        <p className="text-sm text-slate-400 mb-6">
           {isSignUp ? "Start storing your files securely." : "Sign in to access your vault."}
-        </div>
+        </p>
 
-        {/* Form — note we use onSubmit on the form, not onClick on the button,
-            so pressing Enter in any field also triggers it */}
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label style={{ fontSize: 12, fontWeight: 500, color: "#64748b", display: "block", marginBottom: 5 }}>
-              Email
-            </label>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@email.com"
               required
-              style={{
-                width: "100%", padding: "9px 12px", fontSize: 13,
-                borderRadius: 8, border: "1px solid #e2e8f0",
-                color: "#0f172a", outline: "none",
-                transition: "border-color 0.15s",
-              }}
-              onFocus={(e) => (e.target.style.borderColor = "#0F6E56")}
-              onBlur={(e)  => (e.target.style.borderColor = "#e2e8f0")}
+              className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-200 text-slate-900 outline-none focus:border-brand transition-colors"
             />
           </div>
 
           <div>
-            <label style={{ fontSize: 12, fontWeight: 500, color: "#64748b", display: "block", marginBottom: 5 }}>
-              Password
-            </label>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Password</label>
             <input
               type="password"
               value={password}
@@ -110,57 +73,35 @@ export default function LoginPage() {
               placeholder="••••••••"
               required
               minLength={6}
-              style={{
-                width: "100%", padding: "9px 12px", fontSize: 13,
-                borderRadius: 8, border: "1px solid #e2e8f0",
-                color: "#0f172a", outline: "none",
-                transition: "border-color 0.15s",
-              }}
-              onFocus={(e) => (e.target.style.borderColor = "#0F6E56")}
-              onBlur={(e)  => (e.target.style.borderColor = "#e2e8f0")}
+              className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-200 text-slate-900 outline-none focus:border-brand transition-colors"
             />
           </div>
 
-          {/* Error message */}
           {error && (
-            <div style={{
-              fontSize: 12, color: "#A32D2D",
-              background: "#FCEBEB", borderRadius: 8, padding: "8px 12px",
-            }}>{error}</div>
+            <div className="text-xs text-red-700 bg-red-50 rounded-lg px-3 py-2">{error}</div>
           )}
-
-          {/* Success message */}
           {message && (
-            <div style={{
-              fontSize: 12, color: "#085041",
-              background: "#E1F5EE", borderRadius: 8, padding: "8px 12px",
-            }}>{message}</div>
+            <div className="text-xs text-brand-dark bg-brand-light rounded-lg px-3 py-2">{message}</div>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            style={{
-              padding: "10px", fontSize: 14, fontWeight: 600,
-              borderRadius: 8, border: "none",
-              background: loading ? "#94a3b8" : "#0F6E56",
-              color: "white", cursor: loading ? "not-allowed" : "pointer",
-              marginTop: 4, transition: "background 0.15s",
-            }}
-          >{loading ? "Please wait…" : isSignUp ? "Create account" : "Sign in"}</button>
+            className="w-full py-2.5 text-sm font-semibold rounded-lg bg-brand text-white disabled:bg-slate-300 disabled:cursor-not-allowed hover:bg-brand-dark transition-colors mt-1"
+          >
+            {loading ? "Please wait…" : isSignUp ? "Create account" : "Sign in"}
+          </button>
         </form>
 
-        {/* Toggle between sign in / sign up */}
-        <div style={{ textAlign: "center", marginTop: 20, fontSize: 13, color: "#64748b" }}>
+        <p className="text-center text-sm text-slate-400 mt-5">
           {isSignUp ? "Already have an account? " : "Don't have an account? "}
           <button
             onClick={() => { setIsSignUp(!isSignUp); setError(null); setMessage(null); }}
-            style={{
-              background: "none", border: "none", cursor: "pointer",
-              color: "#0F6E56", fontWeight: 600, fontSize: 13, padding: 0,
-            }}
-          >{isSignUp ? "Sign in" : "Sign up"}</button>
-        </div>
+            className="text-brand font-semibold hover:underline"
+          >
+            {isSignUp ? "Sign in" : "Sign up"}
+          </button>
+        </p>
       </div>
     </div>
   );

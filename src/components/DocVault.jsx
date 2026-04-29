@@ -1,33 +1,27 @@
-// DocVault.jsx  — root component
-// Owns the UI state (search, active tab/tag, modal open/close).
-// Delegates ALL data fetching and mutations to the useVault hook.
-
 import { useState } from "react";
-import { useVault }    from "../hooks/useVault";
-import Header          from "./Header";
-import StatsRow        from "./StatsRow";
-import FileCard        from "./FileCard";
-import RightPanel      from "./RightPanel";
-import UploadModal     from "./UploadModal";
+import { useVault }        from "../hooks/useVault";
+import Header              from "./Header";
+import StatsRow            from "./StatsRow";
+import FileCard            from "./FileCard";
+import RightPanel          from "./RightPanel";
+import UploadModal         from "./UploadModal";
+import Toast               from "./Toast";
+import CollectionModal     from "./CollectionModal";
 
 export default function DocVault() {
-  // ── UI-only state (no server contact needed) ───────────────────────
-  const [activeTab,   setActiveTab]   = useState("Overview");
-  const [activeTag,   setActiveTag]   = useState(null);
-  const [search,      setSearch]      = useState("");
-  const [showUpload,  setShowUpload]  = useState(false);
+  const [activeTab,         setActiveTab]         = useState("Overview");
+  const [activeTag,         setActiveTag]         = useState(null);
+  const [search,            setSearch]            = useState("");
+  const [showUpload,        setShowUpload]        = useState(false);
+  const [showNewCollection, setShowNewCollection] = useState(false);
 
-  // ── Server state — all comes from the custom hook ──────────────────
-  // Destructuring: pull named values out of the object the hook returns.
   const {
     files, collections, activity, stats,
-    loading, uploading, error,
-    uploadFile, deleteFile, toggleStar,
+    loading, uploading, error, toast,
+    uploadFile, deleteFile, renameFile,
+    toggleStar, getFileUrl, createCollection,
   } = useVault();
 
-  // ── Derived data (computed from existing state, no useState needed) ─
-  // Filtering is pure JS — no extra state, no useEffect required.
-  // This runs on every render; for huge lists you'd wrap in useMemo.
   const visibleFiles = files.filter((f) => {
     const matchesSearch = f.name.toLowerCase().includes(search.toLowerCase());
     const matchesTag    = !activeTag || f.tag === activeTag;
@@ -35,33 +29,10 @@ export default function DocVault() {
     return matchesSearch && matchesTag && matchesTab;
   });
 
-  // ── Error banner ───────────────────────────────────────────────────
-  // Conditional rendering: JSX can return null to render nothing,
-  // or a real element. The && short-circuit pattern is common in React.
-  if (error) {
-    return (
-      <div style={{
-        padding: 16, background: "#FCEBEB", color: "#A32D2D",
-        borderRadius: 10, fontSize: 13,
-      }}>
-        Error: {error}
-      </div>
-    );
-  }
-
   return (
-    // React.Fragment shorthand (<>) — lets you return multiple elements
-    // without adding an extra wrapper div to the DOM.
     <>
-      <div style={{
-        fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
-        border: "1px solid #e2e8f0", borderRadius: 16,
-        overflow: "hidden", background: "#f8fafc", minHeight: 600,
-      }}>
-        {/* ── Header ─────────────────────────────────────────────── */}
-        {/* Props flow downward (parent → child). The parent passes
-            state values AND setter callbacks so the child can report
-            changes back up — this is called "lifting state up". */}
+      <div className="min-h-screen sm:min-h-0 sm:rounded-2xl sm:border sm:border-slate-200 overflow-hidden bg-slate-50">
+
         <Header
           activeTab={activeTab}
           onTabChange={setActiveTab}
@@ -70,101 +41,95 @@ export default function DocVault() {
           onUploadClick={() => setShowUpload(true)}
         />
 
-        {/* ── Body ───────────────────────────────────────────────── */}
-        <div style={{ display: "flex", background: "#f8fafc" }}>
+        <div className="flex">
 
-          {/* ── Main content ───────────────────────────────────── */}
-          <div style={{ flex: 1, padding: 20, minWidth: 0 }}>
+          {/* Main content */}
+          <main className="flex-1 p-4 sm:p-5 min-w-0">
 
             <StatsRow stats={stats} loading={loading} />
 
-            {/* Section label */}
-            <div style={{
-              fontSize: 11, fontWeight: 600, color: "#94a3b8",
-              letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 10,
-            }}>
-              {search ? `Results for "${search}"` : "Recently added"}
-            </div>
+            {/* Section heading */}
+            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-3">
+              {search ? `Results for "${search}"` : activeTab === "Starred" ? "Starred files" : "Recently added"}
+            </p>
 
-            {/* Loading skeleton for file cards */}
+            {/* Error */}
+            {error && (
+              <div className="text-sm text-red-700 bg-red-50 rounded-xl px-4 py-3 mb-4">{error}</div>
+            )}
+
+            {/* File grid */}
             {loading ? (
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-                gap: 10, marginBottom: 20,
-              }}>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2.5 mb-5">
                 {[0,1,2,3,4,5].map((i) => (
-                  <div key={i} style={{
-                    height: 140, background: "white",
-                    border: "1px solid #e2e8f0", borderRadius: 12,
-                  }} />
+                  <div key={i} className="skeleton h-36 bg-white border border-slate-200 rounded-xl" />
                 ))}
               </div>
             ) : visibleFiles.length === 0 ? (
-              // Empty state
-              <div style={{ padding: "40px 0", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
-                No files found.
+              <div className="flex flex-col items-center justify-center bg-white border border-dashed border-slate-200 rounded-2xl py-14 px-6 mb-5 text-center">
+                <span className="text-4xl mb-3">📂</span>
+                <p className="text-sm font-medium text-slate-800 mb-1">
+                  {search ? "No files match your search" : activeTab === "Starred" ? "No starred files yet" : "No files yet"}
+                </p>
+                <p className="text-xs text-slate-400 mb-4">
+                  {search ? "Try a different search term" : "Upload your first file to get started"}
+                </p>
+                {!search && (
+                  <button
+                    onClick={() => setShowUpload(true)}
+                    className="px-4 py-2 text-sm font-semibold bg-brand text-white rounded-lg hover:bg-brand-dark transition-colors"
+                  >+ Upload file</button>
+                )}
               </div>
             ) : (
-              // File card grid
-              // `gap` in CSS Grid creates space between cells without
-              // adding margin to outer edges — cleaner than margin hacks.
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-                gap: 10, marginBottom: 20,
-              }}>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2.5 mb-5">
                 {visibleFiles.map((file) => (
-                  // Each FileCard receives only what it needs.
-                  // The callbacks (onStar, onDelete) are defined here and
-                  // passed down — FileCard never touches Supabase directly.
                   <FileCard
                     key={file.id}
                     file={file}
                     onStar={toggleStar}
                     onDelete={deleteFile}
+                    onOpen={getFileUrl}
+                    onRename={renameFile}
                   />
                 ))}
               </div>
             )}
 
-            {/* Collections list */}
-            <div style={{
-              fontSize: 11, fontWeight: 600, color: "#94a3b8",
-              letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 10,
-            }}>Collections</div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              {collections.map((c) => (
-                <div key={c.id} style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  padding: "9px 12px", background: "white",
-                  border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer",
-                  transition: "background 0.15s",
-                }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "white")}
-                >
-                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: c.color, flexShrink: 0 }} />
-                  <div style={{ fontSize: 13, color: "#0f172a", flex: 1 }}>{c.name}</div>
-                  <div style={{ fontSize: 11, color: "#94a3b8" }}>{c.count}</div>
-                </div>
-              ))}
+            {/* Collections */}
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Collections</p>
+              <button
+                onClick={() => setShowNewCollection(true)}
+                className="text-xs font-semibold text-brand border border-slate-200 bg-white px-2.5 py-1 rounded-lg hover:bg-slate-50"
+              >+ New</button>
             </div>
-          </div>
 
-          {/* ── Right panel ────────────────────────────────────── */}
-          <RightPanel
-            activity={activity}
-            activeTag={activeTag}
-            onTagChange={setActiveTag}
-          />
+            {collections.length === 0 && !loading ? (
+              <div className="text-center bg-white border border-dashed border-slate-200 rounded-xl py-5 text-xs text-slate-400">
+                No collections yet. Create one to organise your files.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                {collections.map((c) => (
+                  <div
+                    key={c.id}
+                    className="flex items-center gap-3 px-3 py-2.5 bg-white border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="w-2 h-2 rounded-full shrink-0" style={{ background: c.color }} />
+                    <span className="text-sm text-slate-800 flex-1 truncate">{c.name}</span>
+                    <span className="text-xs text-slate-400 shrink-0">{c.count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </main>
+
+          {/* Right panel — hidden below lg */}
+          <RightPanel activity={activity} activeTag={activeTag} onTagChange={setActiveTag} />
         </div>
       </div>
 
-      {/* ── Upload modal ─────────────────────────────────────────── */}
-      {/* Conditional rendering: only mount the modal when showUpload is true.
-          When false, the component is fully removed from the DOM. */}
       {showUpload && (
         <UploadModal
           collections={collections}
@@ -173,6 +138,15 @@ export default function DocVault() {
           onClose={() => setShowUpload(false)}
         />
       )}
+
+      {showNewCollection && (
+        <CollectionModal
+          onSave={createCollection}
+          onClose={() => setShowNewCollection(false)}
+        />
+      )}
+
+      <Toast toast={toast} />
     </>
   );
 }

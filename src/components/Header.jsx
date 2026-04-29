@@ -1,105 +1,93 @@
-// Header.jsx
-// Receives all its data as props — it owns no state of its own.
-// This is called a "controlled" or "presentational" component.
-
+import { useState } from "react";
 import { useAuth } from "../lib/AuthContext";
 
 const TABS = ["Overview", "My files", "Shared", "Starred", "Trash"];
 
 export default function Header({ activeTab, onTabChange, search, onSearchChange, onUploadClick }) {
   const { signOut, session } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div style={{ background: "#0F6E56", padding: "20px 24px 0" }}>
+    <div className="bg-brand px-4 sm:px-6 pt-4 sm:pt-5">
 
-      {/* ── Top bar: brand + search + action buttons ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+      {/* Top bar */}
+      <div className="flex items-center gap-3 flex-wrap mb-4">
 
-        {/* Brand logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 7,
-            background: "rgba(255,255,255,0.2)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
+        {/* Brand */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="white">
-              <rect x="1" y="1" width="5" height="5" rx="1" />
-              <rect x="8" y="1" width="5" height="5" rx="1" />
-              <rect x="1" y="8" width="5" height="5" rx="1" />
-              <rect x="8" y="8" width="5" height="5" rx="1" />
+              <rect x="1" y="1" width="5" height="5" rx="1"/>
+              <rect x="8" y="1" width="5" height="5" rx="1"/>
+              <rect x="1" y="8" width="5" height="5" rx="1"/>
+              <rect x="8" y="8" width="5" height="5" rx="1"/>
             </svg>
           </div>
-          <span style={{ fontSize: 15, fontWeight: 600, color: "white" }}>DocVault</span>
+          <span className="text-white font-semibold text-sm">DocVault</span>
         </div>
 
-        {/* Controlled search input
-            "Controlled" means React drives the value — it always matches
-            the `search` state. Every keystroke calls onSearchChange which
-            updates state in the parent, which re-renders this input. */}
-        <div style={{ flex: 1, maxWidth: 400, margin: "0 auto", position: "relative" }}>
-          <span style={{
-            position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
-            color: "rgba(255,255,255,0.55)", fontSize: 15, pointerEvents: "none",
-          }}>⌕</span>
+        {/* Search — full width on mobile (order-last), centered on desktop */}
+        <div className="order-last sm:order-none flex-1 sm:max-w-sm sm:mx-auto w-full relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 text-sm pointer-events-none">⌕</span>
           <input
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search everything..."
-            style={{
-              width: "100%", padding: "8px 14px 8px 36px", fontSize: 13,
-              borderRadius: 8, border: "1px solid rgba(255,255,255,0.25)",
-              background: "rgba(255,255,255,0.12)", color: "white", outline: "none",
-            }}
+            className="w-full pl-8 pr-3 py-2 text-sm rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 outline-none focus:bg-white/20 transition-colors"
           />
         </div>
 
-        {/* Action buttons */}
-        <div style={{ display: "flex", gap: 8, marginLeft: "auto" }}>
-          <button style={{
-            padding: "6px 14px", fontSize: 12, fontWeight: 500, borderRadius: 8,
-            border: "1px solid rgba(255,255,255,0.3)",
-            background: "rgba(255,255,255,0.15)", color: "white", cursor: "pointer",
-          }}>Filter</button>
-
-          {/* onUploadClick is passed down from the parent — the parent
-              decides what happens (open a modal, trigger file picker, etc.) */}
+        {/* Actions */}
+        <div className="flex items-center gap-2 ml-auto shrink-0">
+          {/* Upload — hidden label on mobile */}
           <button
             onClick={onUploadClick}
-            style={{
-              padding: "6px 14px", fontSize: 12, fontWeight: 600, borderRadius: 8,
-              border: "none", background: "white", color: "#0F6E56", cursor: "pointer",
-            }}
-          >+ New upload</button>
+            className="flex items-center gap-1.5 bg-white text-brand text-xs font-semibold px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
+          >
+            <span>+</span>
+            <span className="hidden sm:inline">New upload</span>
+          </button>
 
-          <button
-            onClick={signOut}
-            title={session?.user?.email}
-            style={{
-              padding: "6px 14px", fontSize: 12, fontWeight: 500, borderRadius: 8,
-              border: "1px solid rgba(255,255,255,0.3)",
-              background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.8)",
-              cursor: "pointer",
-            }}
-          >Sign out</button>
+          {/* User menu */}
+          <div className="relative">
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-xs font-semibold hover:bg-white/30 transition-colors"
+              title={session?.user?.email}
+            >
+              {session?.user?.email?.[0]?.toUpperCase() ?? "U"}
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-10 bg-white rounded-xl shadow-lg border border-slate-100 py-1 min-w-[160px] z-50">
+                <div className="px-3 py-2 text-xs text-slate-400 truncate border-b border-slate-100">
+                  {session?.user?.email}
+                </div>
+                <button
+                  onClick={() => { setMenuOpen(false); signOut(); }}
+                  className="w-full text-left px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* ── Tab navigation ── */}
-      <div style={{ display: "flex" }}>
+      {/* Tabs — horizontal scroll on mobile */}
+      <div className="flex overflow-x-auto scrollbar-hide">
         {TABS.map((tab) => (
           <button
-            key={tab}                         // key helps React track list items efficiently
+            key={tab}
             onClick={() => onTabChange(tab)}
-            style={{
-              padding: "10px 18px", fontSize: 13, cursor: "pointer",
-              background: "none", border: "none", outline: "none",
-              color: activeTab === tab ? "white" : "rgba(255,255,255,0.55)",
-              fontWeight: activeTab === tab ? 600 : 400,
-              // Ternary operator: condition ? valueIfTrue : valueIfFalse
-              borderBottom: activeTab === tab ? "2px solid white" : "2px solid transparent",
-              transition: "all 0.15s",
-            }}
-          >{tab}</button>
+            className={`shrink-0 px-4 py-2.5 text-sm border-b-2 transition-colors whitespace-nowrap
+              ${activeTab === tab
+                ? "text-white border-white font-semibold"
+                : "text-white/55 border-transparent hover:text-white/80"
+              }`}
+          >
+            {tab}
+          </button>
         ))}
       </div>
     </div>

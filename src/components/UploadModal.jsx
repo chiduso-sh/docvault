@@ -1,109 +1,67 @@
-// UploadModal.jsx
-// A modal dialog for picking a file and uploading it.
-// Uses an uncontrolled file input (the browser manages its own value).
-
 import { useState, useRef } from "react";
 
 export default function UploadModal({ collections, uploading, onUpload, onClose }) {
-  // Local state — only this component cares about which file is picked
-  // and which collection/tag the user chose before submitting.
   const [selectedFile, setSelectedFile] = useState(null);
   const [collectionId, setCollectionId] = useState("");
   const [tag, setTag]                   = useState("");
-
-  // useRef gives a direct reference to a DOM element without triggering
-  // a re-render. Here we use it to programmatically click the hidden
-  // file input when the user clicks the styled drop zone.
+  const [dragging, setDragging]         = useState(false);
   const fileInputRef = useRef(null);
 
   function handleFilePick(e) {
-    // e.target.files is a FileList — we grab index [0] for the first file
     const file = e.target.files[0];
     if (file) setSelectedFile(file);
   }
 
   function handleDrop(e) {
-    // preventDefault stops the browser from navigating to the dropped file
     e.preventDefault();
+    setDragging(false);
     const file = e.dataTransfer.files[0];
     if (file) setSelectedFile(file);
   }
 
   async function handleSubmit() {
     if (!selectedFile) return;
-    // Delegate the actual upload to the parent — it owns the Supabase logic
     await onUpload(selectedFile, collectionId || null, tag || null);
     onClose();
   }
 
   return (
-    // Backdrop — clicking outside the modal closes it
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed", inset: 0,                        // covers the entire viewport
-        background: "rgba(0,0,0,0.4)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        zIndex: 50,
-      }}
-    >
-      {/* Modal box — stopPropagation prevents the backdrop click from firing */}
+    <div onClick={onClose} className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{
-          background: "white", borderRadius: 16, padding: 28,
-          width: 440, maxWidth: "90vw",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
-        }}
+        className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
       >
-        <div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a", marginBottom: 20 }}>
-          Upload file
-        </div>
+        <h2 className="text-base font-semibold text-slate-900 mb-5">Upload file</h2>
 
         {/* Drop zone */}
         <div
-          onDragOver={(e) => e.preventDefault()}  // required to allow drop
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current.click()}
-          style={{
-            border: "2px dashed #e2e8f0", borderRadius: 12,
-            padding: "32px 20px", textAlign: "center",
-            cursor: "pointer", marginBottom: 16,
-            background: selectedFile ? "#f0fdf4" : "#f8fafc",
-            transition: "background 0.15s",
-          }}
+          className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer mb-4 transition-colors
+            ${dragging ? "border-brand bg-brand-light" : selectedFile ? "border-brand bg-brand-light/50" : "border-slate-200 bg-slate-50 hover:bg-slate-100"}`}
         >
-          {/* Hidden native file input — triggered by the drop zone click */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            style={{ display: "none" }}
-            onChange={handleFilePick}
-          />
+          <input ref={fileInputRef} type="file" className="hidden" onChange={handleFilePick} />
           {selectedFile ? (
-            <div style={{ fontSize: 13, color: "#0F6E56", fontWeight: 500 }}>
-              {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+            <div className="text-sm font-medium text-brand">
+              {selectedFile.name}
+              <span className="text-slate-400 font-normal ml-2">
+                ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+              </span>
             </div>
           ) : (
-            <div style={{ fontSize: 13, color: "#94a3b8" }}>
-              Drop a file here or click to browse
-            </div>
+            <p className="text-sm text-slate-400">Drop a file here or <span className="text-brand font-medium">browse</span></p>
           )}
         </div>
 
-        {/* Collection picker */}
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ fontSize: 12, color: "#64748b", display: "block", marginBottom: 4 }}>
-            Collection (optional)
-          </label>
+        {/* Collection */}
+        <div className="mb-3">
+          <label className="block text-xs font-medium text-slate-500 mb-1">Collection (optional)</label>
           <select
             value={collectionId}
             onChange={(e) => setCollectionId(e.target.value)}
-            style={{
-              width: "100%", padding: "8px 10px", fontSize: 13,
-              borderRadius: 8, border: "1px solid #e2e8f0",
-              background: "white", color: "#0f172a", outline: "none",
-            }}
+            className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 text-slate-900 outline-none focus:border-brand bg-white"
           >
             <option value="">— None —</option>
             {collections.map((c) => (
@@ -112,43 +70,28 @@ export default function UploadModal({ collections, uploading, onUpload, onClose 
           </select>
         </div>
 
-        {/* Tag input */}
-        <div style={{ marginBottom: 24 }}>
-          <label style={{ fontSize: 12, color: "#64748b", display: "block", marginBottom: 4 }}>
-            Tag (optional)
-          </label>
+        {/* Tag */}
+        <div className="mb-6">
+          <label className="block text-xs font-medium text-slate-500 mb-1">Tag (optional)</label>
           <input
             value={tag}
             onChange={(e) => setTag(e.target.value)}
             placeholder="e.g. Exam prep"
-            style={{
-              width: "100%", padding: "8px 10px", fontSize: 13,
-              borderRadius: 8, border: "1px solid #e2e8f0",
-              color: "#0f172a", outline: "none",
-            }}
+            className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 text-slate-900 outline-none focus:border-brand"
           />
         </div>
 
-        {/* Action buttons */}
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-          <button
-            onClick={onClose}
-            style={{
-              padding: "8px 20px", fontSize: 13, borderRadius: 8,
-              border: "1px solid #e2e8f0", background: "white",
-              color: "#64748b", cursor: "pointer",
-            }}
-          >Cancel</button>
+        <div className="flex gap-2 justify-end">
+          <button onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50">
+            Cancel
+          </button>
           <button
             onClick={handleSubmit}
             disabled={!selectedFile || uploading}
-            style={{
-              padding: "8px 20px", fontSize: 13, fontWeight: 600,
-              borderRadius: 8, border: "none",
-              background: !selectedFile || uploading ? "#94a3b8" : "#0F6E56",
-              color: "white", cursor: !selectedFile || uploading ? "not-allowed" : "pointer",
-            }}
-          >{uploading ? "Uploading…" : "Upload"}</button>
+            className="px-4 py-2 text-sm font-semibold rounded-lg bg-brand text-white disabled:bg-slate-300 disabled:cursor-not-allowed hover:bg-brand-dark transition-colors"
+          >
+            {uploading ? "Uploading…" : "Upload"}
+          </button>
         </div>
       </div>
     </div>
