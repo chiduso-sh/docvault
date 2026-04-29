@@ -1,9 +1,12 @@
 # DocVault
 
-A private file vault for storing, organizing, and searching documents — built with React, Vite, and Supabase.
+A private file vault for storing, organising, and sharing documents — built with React, Vite, and Supabase.
+
+🔗 **Live demo → [docvault-sigma.vercel.app](https://docvault-sigma.vercel.app)**
 
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react)
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=flat&logo=vite)
+![Tailwind](https://img.shields.io/badge/Tailwind-3-38BDF8?style=flat&logo=tailwindcss)
 ![Supabase](https://img.shields.io/badge/Supabase-Database%20%2B%20Storage-3ECF8E?style=flat&logo=supabase)
 
 ---
@@ -12,12 +15,16 @@ A private file vault for storing, organizing, and searching documents — built 
 
 - 🔐 **Authentication** — Sign up / sign in with email and password
 - 📁 **File upload** — Drag and drop or browse. Supports PDF, Word, Excel, and images
-- 🗂️ **Collections** — Organize files into named groups with color labels
-- 🏷️ **Tags** — Tag files and filter the vault by tag
+- 👁️ **File retrieval** — Click any file to open PDFs/images in browser or download others
+- 🗂️ **Collections** — Create named, colour-coded groups to organise files
+- 🏷️ **Tags** — Tag files from the UI and filter the vault by tag
+- 🔗 **Shared links** — Generate expiring signed URLs anyone can use to download a file
 - ⭐ **Starring** — Star important files for quick access
+- ✎ **Rename** — Inline rename directly on the file card
 - 🔍 **Live search** — Filters the file grid instantly as you type
 - 📊 **Stats dashboard** — Total files, storage used, PDF count, collection count
 - 🕓 **Activity feed** — Log of recent uploads and changes
+- 🌙 **Dark mode** — Toggleable, persisted across sessions
 - ⚡ **Real-time updates** — Vault refreshes automatically when files change
 
 ---
@@ -27,10 +34,11 @@ A private file vault for storing, organizing, and searching documents — built 
 | Layer | Technology |
 |---|---|
 | Frontend | React 18 + Vite |
+| Styling | Tailwind CSS 3 |
 | Database | Supabase (PostgreSQL) |
 | File storage | Supabase Storage |
 | Auth | Supabase Auth |
-| Styling | Inline styles (no CSS framework) |
+| Deploy | Vercel |
 
 ---
 
@@ -46,9 +54,7 @@ npm install
 
 ### 2. Set up Supabase
 
-Create a free project at [supabase.com](https://supabase.com), then:
-
-**Database tables** — run this in SQL Editor → New Query:
+Create a free project at [supabase.com](https://supabase.com), then run this in **SQL Editor → New Query**:
 
 ```sql
 create table collections (
@@ -93,29 +99,28 @@ returns json language sql as $$
   );
 $$;
 
--- Enable RLS
 alter table files enable row level security;
 alter table collections enable row level security;
 alter table activity_log enable row level security;
 
--- Policies
 create policy "authenticated insert files" on files for insert to authenticated with check (true);
 create policy "authenticated select files" on files for select to authenticated using (true);
 create policy "authenticated update files" on files for update to authenticated using (true);
 create policy "authenticated delete files" on files for delete to authenticated using (true);
 create policy "authenticated select collections" on collections for select to authenticated using (true);
+create policy "authenticated insert collections" on collections for insert to authenticated with check (true);
 create policy "authenticated insert activity" on activity_log for insert to authenticated with check (true);
 create policy "authenticated select activity" on activity_log for select to authenticated using (true);
 ```
 
 **Storage bucket** — go to Storage → New bucket:
 - Name: `vault`
-- Public: off
+- Public: **off**
 - Allowed MIME types: `application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/*`
 
-Then add two storage policies (Storage → vault → Policies → For full customization):
-- **INSERT** — target role: `authenticated`, definition: `bucket_id = 'vault' AND auth.role() = 'authenticated'`
-- **SELECT** — target role: `authenticated`, definition: `bucket_id = 'vault' AND auth.role() = 'authenticated'`
+Add two storage policies (Storage → vault → Policies → For full customization):
+- **INSERT** — role: `authenticated`, definition: `bucket_id = 'vault' AND auth.role() = 'authenticated'`
+- **SELECT** — role: `authenticated`, definition: `bucket_id = 'vault' AND auth.role() = 'authenticated'`
 
 ### 3. Configure environment variables
 
@@ -123,7 +128,7 @@ Then add two storage policies (Storage → vault → Policies → For full custo
 cp .env.example .env
 ```
 
-Fill in your values from Supabase Dashboard → Settings → API:
+Fill in from **Supabase Dashboard → Settings → API**:
 
 ```
 VITE_SUPABASE_URL=https://your-project-id.supabase.co
@@ -143,19 +148,24 @@ npm run dev
 ```
 src/
 ├── components/
-│   ├── DocVault.jsx     # Root component — owns all UI state
-│   ├── Header.jsx       # Top bar: search, tabs, upload, sign out
-│   ├── StatsRow.jsx     # Four metric cards with loading skeletons
-│   ├── FileCard.jsx     # Individual file card with star/delete
-│   ├── RightPanel.jsx   # Activity feed + tag filter cloud
-│   ├── UploadModal.jsx  # Drag-and-drop upload dialog
-│   └── LoginPage.jsx    # Sign in / sign up form
+│   ├── DocVault.jsx        # Root component — owns all UI state
+│   ├── Header.jsx          # Top bar: search, tabs, dark mode, upload, sign out
+│   ├── StatsRow.jsx        # Four metric cards with loading skeletons
+│   ├── FileCard.jsx        # File card with open, star, rename, tag, share, delete
+│   ├── RightPanel.jsx      # Activity feed + tag filter cloud
+│   ├── UploadModal.jsx     # Drag-and-drop upload dialog
+│   ├── CollectionModal.jsx # Create a new collection
+│   ├── ShareModal.jsx      # Generate expiring shareable links
+│   ├── TagModal.jsx        # Edit file tags from the UI
+│   ├── Toast.jsx           # Auto-dismissing notifications
+│   └── LoginPage.jsx       # Sign in / sign up form
 ├── hooks/
-│   └── useVault.js      # All Supabase data fetching, uploads, mutations
+│   └── useVault.js         # All Supabase data fetching, uploads, mutations
 ├── lib/
-│   ├── supabase.js      # Supabase client singleton
-│   └── AuthContext.jsx  # Auth state + route guard via React Context
-└── main.jsx             # App entry point
+│   ├── supabase.js         # Supabase client singleton
+│   ├── AuthContext.jsx     # Auth state + route guard via React Context
+│   └── useDarkMode.js      # Dark mode toggle persisted to localStorage
+└── main.jsx                # App entry point
 ```
 
 ---
@@ -166,14 +176,13 @@ src/
 npm run build
 ```
 
-Deploy the project to [Vercel](https://vercel.com) or [Netlify](https://netlify.com) and add your two environment variables (`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`) in the platform's dashboard.
+Deploy to [Vercel](https://vercel.com) — import the GitHub repo, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables, and deploy. Every `git push` to `main` triggers an automatic redeploy.
 
 ---
 
 ## Roadmap
 
-- [ ] PDF preview modal
-- [ ] Collection creation from the UI
-- [ ] Shared download links (signed URLs)
-- [ ] File rename
-- [ ] Dark mode
+- [ ] PDF preview modal (inline rendering with pdf.js)
+- [ ] Upload progress bar
+- [ ] Pagination / infinite scroll for large vaults
+- [ ] Password reset flow
