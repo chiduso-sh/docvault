@@ -3,7 +3,7 @@ import { useAuth } from "../lib/AuthContext";
 
 const TABS = ["Overview", "My files", "Shared", "Starred", "Trash"];
 
-export default function Header({ activeTab, onTabChange, search, onSearchChange, onUploadClick }) {
+export default function Header({ activeTab, onTabChange, search, onSearchChange, onUploadClick, dark, onToggleDark }) {
   const { signOut, session } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -26,7 +26,7 @@ export default function Header({ activeTab, onTabChange, search, onSearchChange,
           <span className="text-white font-semibold text-sm">DocVault</span>
         </div>
 
-        {/* Search — full width on mobile (order-last), centered on desktop */}
+        {/* Search */}
         <div className="order-last sm:order-none flex-1 sm:max-w-sm sm:mx-auto w-full relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 text-sm pointer-events-none">⌕</span>
           <input
@@ -39,7 +39,17 @@ export default function Header({ activeTab, onTabChange, search, onSearchChange,
 
         {/* Actions */}
         <div className="flex items-center gap-2 ml-auto shrink-0">
-          {/* Upload — hidden label on mobile */}
+
+          {/* Dark mode toggle */}
+          <button
+            onClick={onToggleDark}
+            title={dark ? "Light mode" : "Dark mode"}
+            className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center text-white hover:bg-white/25 transition-colors text-sm"
+          >
+            {dark ? "☀️" : "🌙"}
+          </button>
+
+          {/* Upload */}
           <button
             onClick={onUploadClick}
             className="flex items-center gap-1.5 bg-white text-brand text-xs font-semibold px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
@@ -48,7 +58,7 @@ export default function Header({ activeTab, onTabChange, search, onSearchChange,
             <span className="hidden sm:inline">New upload</span>
           </button>
 
-          {/* User menu */}
+          {/* User avatar menu */}
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
@@ -58,23 +68,21 @@ export default function Header({ activeTab, onTabChange, search, onSearchChange,
               {session?.user?.email?.[0]?.toUpperCase() ?? "U"}
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-10 bg-white rounded-xl shadow-lg border border-slate-100 py-1 min-w-[160px] z-50">
-                <div className="px-3 py-2 text-xs text-slate-400 truncate border-b border-slate-100">
+              <div className="absolute right-0 top-10 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700 py-1 min-w-[180px] z-50">
+                <div className="px-3 py-2 text-xs text-slate-400 truncate border-b border-slate-100 dark:border-slate-700">
                   {session?.user?.email}
                 </div>
                 <button
                   onClick={() => { setMenuOpen(false); signOut(); }}
-                  className="w-full text-left px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
-                >
-                  Sign out
-                </button>
+                  className="w-full text-left px-3 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                >Sign out</button>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Tabs — horizontal scroll on mobile */}
+      {/* Tabs */}
       <div className="flex overflow-x-auto scrollbar-hide">
         {TABS.map((tab) => (
           <button
@@ -85,9 +93,7 @@ export default function Header({ activeTab, onTabChange, search, onSearchChange,
                 ? "text-white border-white font-semibold"
                 : "text-white/55 border-transparent hover:text-white/80"
               }`}
-          >
-            {tab}
-          </button>
+          >{tab}</button>
         ))}
       </div>
     </div>

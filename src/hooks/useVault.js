@@ -9,10 +9,7 @@ function formatBytes(bytes) {
 }
 
 function formatDate(isoString) {
-  return new Date(isoString).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
+  return new Date(isoString).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function inferType(mimeType = "") {
@@ -38,37 +35,23 @@ export function useVault() {
   }, []);
 
   const fetchFiles = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("files")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("files").select("*").order("created_at", { ascending: false });
     if (error) { setError(error.message); return; }
     setFiles(data.map((row) => ({
-      id:          row.id,
-      name:        row.name,
-      type:        inferType(row.mime_type),
-      size:        formatBytes(row.size_bytes),
-      date:        formatDate(row.created_at),
-      thumb:       row.page_count ? `${row.page_count} pages` : inferType(row.mime_type),
-      tag:         row.tag ?? "",
-      starred:     row.starred ?? false,
-      storagePath: row.storage_path,
-      mimeType:    row.mime_type,
+      id: row.id, name: row.name, type: inferType(row.mime_type),
+      size: formatBytes(row.size_bytes), date: formatDate(row.created_at),
+      thumb: row.page_count ? `${row.page_count} pages` : inferType(row.mime_type),
+      tag: row.tag ?? "", starred: row.starred ?? false,
+      storagePath: row.storage_path, mimeType: row.mime_type,
     })));
   }, []);
 
   const fetchCollections = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("collections")
-      .select("id, name, color")
-      .order("name");
+    const { data, error } = await supabase.from("collections").select("id, name, color").order("name");
     if (error) { setError(error.message); return; }
     const withCounts = await Promise.all(
       data.map(async (col) => {
-        const { count } = await supabase
-          .from("files")
-          .select("*", { count: "exact", head: true })
-          .eq("collection_id", col.id);
+        const { count } = await supabase.from("files").select("*", { count: "exact", head: true }).eq("collection_id", col.id);
         return { ...col, count: `${count ?? 0} files` };
       })
     );
@@ -76,11 +59,7 @@ export function useVault() {
   }, []);
 
   const fetchActivity = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("activity_log")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(10);
+    const { data, error } = await supabase.from("activity_log").select("*").order("created_at", { ascending: false }).limit(10);
     if (error) { setError(error.message); return; }
     setActivity(data ?? []);
   }, []);
@@ -110,17 +89,13 @@ export function useVault() {
     if (mimeType?.includes("image") || mimeType?.includes("pdf")) {
       window.open(data.signedUrl, "_blank");
     } else {
-      const a = document.createElement("a");
-      a.href = data.signedUrl;
-      a.download = "";
-      a.click();
+      const a = document.createElement("a"); a.href = data.signedUrl; a.download = ""; a.click();
     }
     return data.signedUrl;
   }, [showToast]);
 
   const uploadFile = useCallback(async (file, collectionId, tag) => {
-    setUploading(true);
-    setError(null);
+    setUploading(true); setError(null);
     try {
       const storagePath = `uploads/${Date.now()}_${file.name}`;
       const { error: storageError } = await supabase.storage.from("vault").upload(storagePath, file);
@@ -133,12 +108,8 @@ export function useVault() {
       await supabase.from("activity_log").insert({ icon: "+", message: `${file.name} uploaded`, detail: "" });
       await loadAll();
       showToast(`"${file.name}" uploaded successfully`);
-    } catch (err) {
-      setError(err.message);
-      showToast(err.message, "error");
-    } finally {
-      setUploading(false);
-    }
+    } catch (err) { setError(err.message); showToast(err.message, "error"); }
+    finally { setUploading(false); }
   }, [loadAll, showToast]);
 
   const deleteFile = useCallback(async (fileId, storagePath, fileName) => {
@@ -162,6 +133,13 @@ export function useVault() {
     showToast(currentStarred ? "Removed from starred" : "Added to starred");
   }, [showToast]);
 
+  const updateTag = useCallback(async (fileId, tag) => {
+    const { error } = await supabase.from("files").update({ tag }).eq("id", fileId);
+    if (error) { showToast("Could not update tag", "error"); return; }
+    setFiles((prev) => prev.map((f) => f.id === fileId ? { ...f, tag: tag ?? "" } : f));
+    showToast(tag ? `Tag set to "${tag}"` : "Tag removed");
+  }, [showToast]);
+
   const createCollection = useCallback(async (name, color) => {
     const { error } = await supabase.from("collections").insert({ name, color });
     if (error) { showToast("Could not create collection", "error"); return; }
@@ -182,6 +160,6 @@ export function useVault() {
     files, collections, activity, stats,
     loading, uploading, error, toast,
     uploadFile, deleteFile, renameFile,
-    toggleStar, getFileUrl, createCollection,
+    toggleStar, getFileUrl, createCollection, updateTag,
   };
 }

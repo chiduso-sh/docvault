@@ -7,7 +7,7 @@ const BADGE = {
   IMG: "bg-green-50 text-green-700",
 };
 
-export default function FileCard({ file, onStar, onDelete, onOpen, onRename }) {
+export default function FileCard({ file, onStar, onDelete, onOpen, onRename, onShare, onTag }) {
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName]   = useState(file.name);
 
@@ -19,7 +19,7 @@ export default function FileCard({ file, onStar, onDelete, onOpen, onRename }) {
   return (
     <div
       onClick={() => !renaming && onOpen(file.storagePath, file.mimeType)}
-      className="bg-white border border-slate-200 rounded-xl p-3 cursor-pointer hover:border-slate-400 transition-colors group"
+      className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 cursor-pointer hover:border-slate-400 dark:hover:border-slate-500 transition-colors group"
     >
       {/* Top row */}
       <div className="flex items-start justify-between mb-2.5">
@@ -27,42 +27,52 @@ export default function FileCard({ file, onStar, onDelete, onOpen, onRename }) {
           {file.type}
         </span>
         <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={(e) => { e.stopPropagation(); onStar(file.id, file.starred); }}
-            className={`text-sm leading-none ${file.starred ? "text-amber-500" : "text-slate-300 hover:text-amber-400"} transition-colors`}
+          <button onClick={(e) => { e.stopPropagation(); onStar(file.id, file.starred); }}
+            className={`text-sm leading-none transition-colors ${file.starred ? "text-amber-500" : "text-slate-300 hover:text-amber-400"}`}
           >★</button>
-          <button
-            onClick={(e) => { e.stopPropagation(); setRenaming(true); setNewName(file.name); }}
+          <button onClick={(e) => { e.stopPropagation(); onTag(file); }}
+            title="Edit tag"
+            className="text-xs leading-none text-slate-300 hover:text-brand transition-colors"
+          >🏷</button>
+          <button onClick={(e) => { e.stopPropagation(); onShare(file); }}
+            title="Share"
+            className="text-xs leading-none text-slate-300 hover:text-blue-500 transition-colors"
+          >🔗</button>
+          <button onClick={(e) => { e.stopPropagation(); setRenaming(true); setNewName(file.name); }}
             className="text-xs leading-none text-slate-300 hover:text-slate-500 transition-colors"
           >✎</button>
-          <button
-            onClick={(e) => { e.stopPropagation(); onDelete(file.id, file.storagePath, file.name); }}
+          <button onClick={(e) => { e.stopPropagation(); onDelete(file.id, file.storagePath, file.name); }}
             className="text-xs leading-none text-red-300 hover:text-red-500 transition-colors"
           >✕</button>
         </div>
       </div>
 
       {/* Thumbnail */}
-      <div className="w-full h-16 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-xs font-medium text-slate-400 mb-2.5">
+      <div className="w-full h-16 rounded-lg bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 flex items-center justify-center text-xs font-medium text-slate-400 mb-2.5">
         {file.thumb}
       </div>
 
-      {/* Name / rename input */}
+      {/* Name / rename */}
       {renaming ? (
-        <input
-          autoFocus
-          value={newName}
+        <input autoFocus value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onBlur={submitRename}
           onKeyDown={(e) => { if (e.key === "Enter") submitRename(); if (e.key === "Escape") setRenaming(false); }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full text-xs font-medium text-slate-900 border border-brand rounded px-1 py-0.5 outline-none mb-1"
+          className="w-full text-xs font-medium text-slate-900 dark:text-white border border-brand rounded px-1 py-0.5 outline-none mb-1 bg-white dark:bg-slate-700"
         />
       ) : (
-        <div className="text-xs font-medium text-slate-900 truncate mb-1">{file.name}</div>
+        <div className="text-xs font-medium text-slate-900 dark:text-white truncate mb-1">{file.name}</div>
       )}
 
-      <div className="text-[11px] text-slate-400">{file.size} · {file.date}</div>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] text-slate-400">{file.size} · {file.date}</span>
+        {file.tag && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-brand-light text-brand-dark font-medium truncate max-w-[80px]">
+            {file.tag}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
