@@ -1,31 +1,37 @@
 # DocVault
 
-A private file vault for storing, organising, and sharing documents — built with React, Vite, and Supabase.
+A private, full-stack document vault — upload, organise, preview, and share files securely.
 
 🔗 **Live demo → [docvault-sigma.vercel.app](https://docvault-sigma.vercel.app)**
+
+![DocVault Screenshot](./screenshot.png)
 
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react)
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=flat&logo=vite)
 ![Tailwind](https://img.shields.io/badge/Tailwind-3-38BDF8?style=flat&logo=tailwindcss)
 ![Supabase](https://img.shields.io/badge/Supabase-Database%20%2B%20Storage-3ECF8E?style=flat&logo=supabase)
+![Vercel](https://img.shields.io/badge/Deployed-Vercel-000000?style=flat&logo=vercel)
 
 ---
 
 ## Features
 
-- 🔐 **Authentication** — Sign up / sign in with email and password
-- 📁 **File upload** — Drag and drop or browse. Supports PDF, Word, Excel, and images
-- 👁️ **File retrieval** — Click any file to open PDFs/images in browser or download others
-- 🗂️ **Collections** — Create named, colour-coded groups to organise files
-- 🏷️ **Tags** — Tag files from the UI and filter the vault by tag
-- 🔗 **Shared links** — Generate expiring signed URLs anyone can use to download a file
-- ⭐ **Starring** — Star important files for quick access
-- ✎ **Rename** — Inline rename directly on the file card
-- 🔍 **Live search** — Filters the file grid instantly as you type
-- 📊 **Stats dashboard** — Total files, storage used, PDF count, collection count
-- 🕓 **Activity feed** — Log of recent uploads and changes
-- 🌙 **Dark mode** — Toggleable, persisted across sessions
-- ⚡ **Real-time updates** — Vault refreshes automatically when files change
+| | Feature |
+|---|---|
+| 🔐 | Email authentication — sign up, sign in, forgot password, reset password |
+| 📁 | Drag-and-drop file upload with progress bar |
+| 👁️ | Inline PDF preview with page navigation and zoom |
+| 🗂️ | Collections — colour-coded groups for organising files |
+| 🏷️ | Tags — set and filter from the UI |
+| 🔗 | Shared download links — expiring signed URLs, no login required |
+| ⭐ | Star files for quick access |
+| ✎ | Inline file rename |
+| 🔍 | Live search |
+| 📊 | Stats dashboard — files, storage, PDFs, collections |
+| 🕓 | Activity feed |
+| 🌙 | Dark mode, persisted across sessions |
+| ⚡ | Real-time updates via Supabase WebSocket |
+| 📱 | Fully responsive — mobile, tablet, desktop |
 
 ---
 
@@ -35,10 +41,11 @@ A private file vault for storing, organising, and sharing documents — built wi
 |---|---|
 | Frontend | React 18 + Vite |
 | Styling | Tailwind CSS 3 |
-| Database | Supabase (PostgreSQL) |
+| Database | Supabase (PostgreSQL + Row Level Security) |
 | File storage | Supabase Storage |
 | Auth | Supabase Auth |
-| Deploy | Vercel |
+| PDF rendering | pdf.js (pdfjs-dist) |
+| Deploy | Vercel (CI/CD via GitHub) |
 
 ---
 
@@ -47,7 +54,7 @@ A private file vault for storing, organising, and sharing documents — built wi
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/yourname/docvault.git
+git clone https://github.com/chiduso-sh/docvault.git
 cd docvault
 npm install
 ```
@@ -99,30 +106,36 @@ returns json language sql as $$
   );
 $$;
 
+-- Enable RLS
 alter table files enable row level security;
 alter table collections enable row level security;
 alter table activity_log enable row level security;
 
-create policy "authenticated insert files" on files for insert to authenticated with check (true);
-create policy "authenticated select files" on files for select to authenticated using (true);
-create policy "authenticated update files" on files for update to authenticated using (true);
-create policy "authenticated delete files" on files for delete to authenticated using (true);
+-- Policies
+create policy "authenticated insert files"      on files        for insert to authenticated with check (true);
+create policy "authenticated select files"      on files        for select to authenticated using (true);
+create policy "authenticated update files"      on files        for update to authenticated using (true);
+create policy "authenticated delete files"      on files        for delete to authenticated using (true);
 create policy "authenticated select collections" on collections for select to authenticated using (true);
 create policy "authenticated insert collections" on collections for insert to authenticated with check (true);
-create policy "authenticated insert activity" on activity_log for insert to authenticated with check (true);
-create policy "authenticated select activity" on activity_log for select to authenticated using (true);
+create policy "authenticated insert activity"   on activity_log for insert to authenticated with check (true);
+create policy "authenticated select activity"   on activity_log for select to authenticated using (true);
 ```
 
-**Storage bucket** — go to Storage → New bucket:
+**Storage bucket** — go to **Storage → New bucket**:
 - Name: `vault`
 - Public: **off**
 - Allowed MIME types: `application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/*`
 
-Add two storage policies (Storage → vault → Policies → For full customization):
+Add two storage policies (**Storage → vault → Policies → For full customization**):
 - **INSERT** — role: `authenticated`, definition: `bucket_id = 'vault' AND auth.role() = 'authenticated'`
 - **SELECT** — role: `authenticated`, definition: `bucket_id = 'vault' AND auth.role() = 'authenticated'`
 
-### 3. Configure environment variables
+**Auth settings** — go to **Authentication → URL Configuration**:
+- Site URL: `https://your-app.vercel.app`
+- Redirect URLs: add `https://your-app.vercel.app/reset-password`
+
+### 3. Environment variables
 
 ```bash
 cp .env.example .env
@@ -148,41 +161,37 @@ npm run dev
 ```
 src/
 ├── components/
-│   ├── DocVault.jsx        # Root component — owns all UI state
-│   ├── Header.jsx          # Top bar: search, tabs, dark mode, upload, sign out
-│   ├── StatsRow.jsx        # Four metric cards with loading skeletons
-│   ├── FileCard.jsx        # File card with open, star, rename, tag, share, delete
-│   ├── RightPanel.jsx      # Activity feed + tag filter cloud
-│   ├── UploadModal.jsx     # Drag-and-drop upload dialog
-│   ├── CollectionModal.jsx # Create a new collection
-│   ├── ShareModal.jsx      # Generate expiring shareable links
-│   ├── TagModal.jsx        # Edit file tags from the UI
-│   ├── Toast.jsx           # Auto-dismissing notifications
-│   └── LoginPage.jsx       # Sign in / sign up form
+│   ├── DocVault.jsx          # Root — owns all UI state
+│   ├── Header.jsx            # Search, tabs, dark mode, upload, sign out
+│   ├── StatsRow.jsx          # Metric cards with loading skeletons
+│   ├── FileCard.jsx          # Card with open, star, rename, tag, share, delete
+│   ├── PdfPreviewModal.jsx   # Inline PDF viewer (pdf.js)
+│   ├── ShareModal.jsx        # Generate expiring download links
+│   ├── TagModal.jsx          # Edit file tags
+│   ├── UploadModal.jsx       # Drag-and-drop upload with progress bar
+│   ├── CollectionModal.jsx   # Create collections
+│   ├── RightPanel.jsx        # Activity feed + tag filter cloud
+│   ├── Toast.jsx             # Auto-dismissing notifications
+│   ├── LoginPage.jsx         # Sign in / sign up / forgot password
+│   └── ResetPassword.jsx     # Password reset (handles magic link redirect)
 ├── hooks/
-│   └── useVault.js         # All Supabase data fetching, uploads, mutations
+│   └── useVault.js           # All Supabase data fetching and mutations
 ├── lib/
-│   ├── supabase.js         # Supabase client singleton
-│   ├── AuthContext.jsx     # Auth state + route guard via React Context
-│   └── useDarkMode.js      # Dark mode toggle persisted to localStorage
-└── main.jsx                # App entry point
+│   ├── supabase.js           # Supabase client singleton
+│   ├── AuthContext.jsx       # Session state + route guard
+│   └── useDarkMode.js        # Dark mode toggle, persisted to localStorage
+└── main.jsx                  # Entry point + client-side routing
 ```
 
 ---
 
 ## Deployment
 
+Push to GitHub and import the repo on [Vercel](https://vercel.com). Add your two environment variables in the Vercel dashboard and deploy. Every `git push` to `main` triggers an automatic redeploy.
+
 ```bash
-npm run build
+npm run build   # local build check
+git add .
+git commit -m "your message"
+git push
 ```
-
-Deploy to [Vercel](https://vercel.com) — import the GitHub repo, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables, and deploy. Every `git push` to `main` triggers an automatic redeploy.
-
----
-
-## Roadmap
-
-- [ ] PDF preview modal (inline rendering with pdf.js)
-- [ ] Upload progress bar
-- [ ] Pagination / infinite scroll for large vaults
-- [ ] Password reset flow
