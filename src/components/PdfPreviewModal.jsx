@@ -7,7 +7,8 @@ import * as pdfjsLib from "pdfjs-dist";
 
 // pdf.js needs a worker script to parse PDFs off the main thread.
 // We point it to the CDN copy so we don't have to bundle it ourselves.
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
 export default function PdfPreviewModal({ file, signedUrl, onClose }) {
   const canvasRef    = useRef(null);
