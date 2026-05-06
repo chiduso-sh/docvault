@@ -83,6 +83,13 @@ export function useVault() {
     setLoading(false);
   }, [fetchFiles, fetchCollections, fetchActivity, fetchStats]);
 
+  // getSignedUrl — returns URL only, no side effects (used by PDF preview)
+  const getSignedUrl = useCallback(async (storagePath) => {
+    const { data, error } = await supabase.storage.from("vault").createSignedUrl(storagePath, 120);
+    if (error) { showToast("Could not load file", "error"); return null; }
+    return data.signedUrl;
+  }, [showToast]);
+
   const getFileUrl = useCallback(async (storagePath, mimeType) => {
     const { data, error } = await supabase.storage.from("vault").createSignedUrl(storagePath, 60);
     if (error) { showToast("Could not open file", "error"); return null; }
@@ -160,6 +167,6 @@ export function useVault() {
     files, collections, activity, stats,
     loading, uploading, error, toast,
     uploadFile, deleteFile, renameFile,
-    toggleStar, getFileUrl, createCollection, updateTag,
+    toggleStar, getFileUrl, getSignedUrl, createCollection, updateTag,
   };
 }

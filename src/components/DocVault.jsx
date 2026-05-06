@@ -10,23 +10,40 @@ import Toast               from "./Toast";
 import CollectionModal     from "./CollectionModal";
 import ShareModal          from "./ShareModal";
 import TagModal            from "./TagModal";
+import PdfPreviewModal     from "./PdfPreviewModal";
 
 export default function DocVault() {
-  const [dark, setDark]                     = useDarkMode();
-  const [activeTab, setActiveTab]           = useState("Overview");
-  const [activeTag, setActiveTag]           = useState(null);
-  const [search, setSearch]                 = useState("");
-  const [showUpload, setShowUpload]         = useState(false);
+  const [dark, setDark]                           = useDarkMode();
+  const [activeTab, setActiveTab]                 = useState("Overview");
+  const [activeTag, setActiveTag]                 = useState(null);
+  const [search, setSearch]                       = useState("");
+  const [showUpload, setShowUpload]               = useState(false);
   const [showNewCollection, setShowNewCollection] = useState(false);
-  const [shareFile, setShareFile]           = useState(null);  // file to share
-  const [tagFile, setTagFile]               = useState(null);  // file to tag
+  const [shareFile, setShareFile]                 = useState(null);
+  const [tagFile, setTagFile]                     = useState(null);
+  const [pdfPreview, setPdfPreview]               = useState(null); // { file, signedUrl }
 
   const {
     files, collections, activity, stats,
     loading, uploading, error, toast,
     uploadFile, deleteFile, renameFile,
-    toggleStar, getFileUrl, createCollection, updateTag,
+    toggleStar, getFileUrl, getSignedUrl,
+    createCollection, updateTag,
   } = useVault();
+
+  // ── Handle file card click ────────────────────────────────────────
+  // PDFs open in the preview modal; everything else uses the original
+  // getFileUrl behaviour (open in tab or download).
+  async function handleOpen(storagePath, mimeType) {
+    if (mimeType?.includes("pdf")) {
+      const url = await getSignedUrl(storagePath);
+      if (!url) return;
+      const file = files.find((f) => f.storagePath === storagePath);
+      setPdfPreview({ file, signedUrl: url });
+    } else {
+      getFileUrl(storagePath, mimeType);
+    }
+  }
 
   const visibleFiles = files.filter((f) => {
     const matchesSearch = f.name.toLowerCase().includes(search.toLowerCase());
@@ -79,10 +96,9 @@ export default function DocVault() {
                   {search ? "Try a different search term" : "Upload your first file to get started"}
                 </p>
                 {!search && (
-                  <button
-                    onClick={() => setShowUpload(true)}
-                    className="px-4 py-2 text-sm font-semibold bg-brand text-white rounded-lg hover:bg-brand-dark transition-colors"
-                  >+ Upload file</button>
+                  <button onClick={() => setShowUpload(true)} className="px-4 py-2 text-sm font-semibold bg-brand text-white rounded-lg hover:bg-brand-dark transition-colors">
+                    + Upload file
+                  </button>
                 )}
               </div>
             ) : (
@@ -93,7 +109,7 @@ export default function DocVault() {
                     file={file}
                     onStar={toggleStar}
                     onDelete={deleteFile}
-                    onOpen={getFileUrl}
+                    onOpen={handleOpen}
                     onRename={renameFile}
                     onShare={(f) => setShareFile(f)}
                     onTag={(f) => setTagFile(f)}
@@ -132,18 +148,11 @@ export default function DocVault() {
         </div>
       </div>
 
-      {showUpload && (
-        <UploadModal collections={collections} uploading={uploading} onUpload={uploadFile} onClose={() => setShowUpload(false)} />
-      )}
-      {showNewCollection && (
-        <CollectionModal onSave={createCollection} onClose={() => setShowNewCollection(false)} />
-      )}
-      {shareFile && (
-        <ShareModal file={shareFile} onClose={() => setShareFile(null)} />
-      )}
-      {tagFile && (
-        <TagModal file={tagFile} onSave={updateTag} onClose={() => setTagFile(null)} />
-      )}
+      {showUpload       && <UploadModal collections={collections} uploading={uploading} onUpload={uploadFile} onClose={() => setShowUpload(false)} />}
+      {showNewCollection && <CollectionModal onSave={createCollection} onClose={() => setShowNewCollection(false)} />}
+      {shareFile        && <ShareModal file={shareFile} onClose={() => setShareFile(null)} />}
+      {tagFile          && <TagModal file={tagFile} onSave={updateTag} onClose={() => setTagFile(null)} />}
+      {pdfPreview       && <PdfPreviewModal file={pdfPreview.file} signedUrl={pdfPreview.signedUrl} onClose={() => setPdfPreview(null)} />}
 
       <Toast toast={toast} />
     </>
